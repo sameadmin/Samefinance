@@ -808,15 +808,15 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
     }
 
     BankConfig public config;
-    mapping(address => TokenBank) public banks;//银行信息
+    mapping(address => TokenBank) public banks;
 
-    mapping(uint256 => Production) public productions; //制作
+    mapping(uint256 => Production) public productions;
     uint256 public currentPid;
 
-    mapping(uint256 => Position) public positions;//仓位
+    mapping(uint256 => Position) public positions;
     uint256 public currentPos;
 
-    mapping(address => uint256[]) public userPosition;//用户仓位
+    mapping(address => uint256[]) public userPosition;
 
 
     struct Pos{
@@ -883,25 +883,25 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
 
     }
 
-    /// @dev Return the BNB debt value given the debt share. Be careful of unaccrued interests.返回给定债务份额的 BNB 债务值。小心未计利息。
+    /// @dev Return the BNB debt value given the debt share. Be careful of unaccrued interests.
     /// @param debtShare The debt share to be converted. DebtShare 要转换的债务份额。
-    function debtShareToVal(address token, uint256 debtShare) public view returns (uint256) {//每个ibtoken能换多少币
+    function debtShareToVal(address token, uint256 debtShare) public view returns (uint256) {
         TokenBank storage bank = banks[token];
         require(bank.isOpen, 'token not exists');
         if (bank.totalDebtShare == 0) return debtShare;
         return debtShare.mul(bank.totalDebt).div(bank.totalDebtShare);
     }
 
-    /// @dev Return the debt share for the given debt value. Be careful of unaccrued interests.返回给定债务值的债务份额。小心未计利息。
-    /// @param debtVal The debt value to be converted. DebtVal 要转换的债务值。
-    function debtValToShare(address token, uint256 debtVal) public view returns (uint256) {//每个币能换多少ibtoken
+    /// @dev Return the debt share for the given debt value. Be careful of unaccrued interests.
+    /// @param debtVal The debt value to be converted. DebtVal
+    function debtValToShare(address token, uint256 debtVal) public view returns (uint256) {
         TokenBank storage bank = banks[token];
         require(bank.isOpen, 'token not exists');
         if (bank.totalDebt == 0) return debtVal;
         return debtVal.mul(bank.totalDebtShare).div(bank.totalDebt);
     }
 
-    function totalToken(address token) public view returns (uint256) {//总token数量
+    function totalToken(address token) public view returns (uint256) {
         TokenBank storage bank = banks[token];
         require(bank.isOpen, 'token not exists');
         uint balance = token == address(0) ? address(this).balance : SafeToken.myBalance(token);
@@ -909,14 +909,14 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         return balance.add(bank.totalDebt).sub(bank.totalReserve);
     }
 
-    function positionInfo(uint256 posId) public view returns (uint256, uint256, uint256, address) {//仓位信息
+    function positionInfo(uint256 posId) public view returns (uint256, uint256, uint256, address) {
         Position storage pos = positions[posId];
         Production storage prod = productions[pos.productionId];
         return (pos.productionId, Goblin(prod.goblin).health(posId, prod.borrowToken),
             debtShareToVal(prod.borrowToken, pos.debtShare), pos.owner);
     }
 
-    function deposit(address token, uint256 amount) external payable nonReentrant {//存款
+    function deposit(address token, uint256 amount) external payable nonReentrant {
         TokenBank storage bank = banks[token];
         require(bank.isOpen && bank.canDeposit, 'Token not exist or cannot deposit');
 
@@ -933,7 +933,7 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         IBToken(bank.ibTokenAddr).mint(msg.sender, ibAmount);
     }
 
-    function withdraw(address token, uint256 pAmount) external nonReentrant {//提币
+    function withdraw(address token, uint256 pAmount) external nonReentrant {
         TokenBank storage bank = banks[token];
         require(bank.isOpen && bank.canWithdraw, 'Token not exist or cannot withdraw');
 
@@ -970,7 +970,7 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
 
         calInterest(production.borrowToken);
 
-        uint256 debt = _removeDebt(posId, production).add(borrow);//
+        uint256 debt = _removeDebt(posId, production).add(borrow);
         bool isBorrowBNB = production.borrowToken == address(0);
 
 		uint256 sendBNB = msg.value;
@@ -1003,14 +1003,14 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
             require(debt >= production.minDebt && debt <= production.maxDebt, "Debt scale is out of scope");
             uint256 health = Goblin(production.goblin).health(posId, production.borrowToken);
             require(config.isStable(production.goblin),"!goblin");
-            require(health.mul(production.openFactor) >= debt.mul(GLO_VAL), "bad work factor");//
+            require(health.mul(production.openFactor) >= debt.mul(GLO_VAL), "bad work factor");
 
             _addDebt(posId, production, debt);
         }
         emit Work(posId, debt, backToken);
     }
 
-    function kill(uint256 posId) external payable onlyEOA nonReentrant {//杀掉
+    function kill(uint256 posId) external payable onlyEOA nonReentrant {
         require(killWhitelist[msg.sender],"Not Whitelist");
 
         Position storage pos = positions[posId];
@@ -1046,7 +1046,7 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         emit Kill(posId, msg.sender, prize, left);
     }
 
-    function _addDebt(uint256 posId, Production storage production, uint256 debtVal) internal {//_增加债务
+    function _addDebt(uint256 posId, Production storage production, uint256 debtVal) internal {
         if (debtVal == 0) {
             return;
         }
@@ -1060,7 +1060,7 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         emit AddDebt(posId, debtShare);
     }
 
-    function _removeDebt(uint256 posId, Production storage production) internal returns (uint256) {//_去除债务
+    function _removeDebt(uint256 posId, Production storage production) internal returns (uint256) {
         TokenBank storage bank = banks[production.borrowToken];
         Position storage pos = positions[posId];
         uint256 debtShare = pos.debtShare;
@@ -1077,11 +1077,11 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         }
     }
 
-    function updateConfig(BankConfig _config) external onlyGov {//更新配置文件
+    function updateConfig(BankConfig _config) external onlyGov {
         config = _config;
     }
 
-    function addBank(address token, string calldata _symbol) external onlyGov {//添加银行
+    function addBank(address token, string calldata _symbol) external onlyGov {
         TokenBank storage bank = banks[token];
         require(!bank.isOpen, 'token already exists');
 
@@ -1098,7 +1098,7 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         bank.lastInterestTime = now;
     }
 
-    function createProduction(//创建生产
+    function createProduction(
         uint256 pid,
         bool isOpen,
         bool canBorrow,
@@ -1133,7 +1133,7 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         production.liquidateFactor = liquidateFactor;
     }
 
-    function calInterest(address token) public {//结息
+    function calInterest(address token) public {
         TokenBank storage bank = banks[token];
         require(bank.isOpen, 'token not exists');
         if (now > bank.lastInterestTime) {
@@ -1171,22 +1171,29 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         }
     }
 
-    function ibTokenCalculation(address token, uint256 amount) view external returns(uint256){//ibToken计算
+    function ibTokenCalculation(address token, uint256 amount) view external returns(uint256){
         TokenBank memory bank = banks[token];
         uint256 total = totalToken(token)/*.sub(amount)*/;
         uint256 ibTotal = IBToken(bank.ibTokenAddr).totalSupply();
         return (total == 0 || ibTotal == 0) ? amount: amount.mul(ibTotal).div(total);
     }
 
-    function createkillWhitelist(address addr,bool status) external onlyGov {//创建黑名单
+    function createkillWhitelist(address addr,bool status) external onlyGov {
         require(addr != address(0));
         killWhitelist[addr] = status;
     }
 
-    function setDevAddr(address addr) external onlyGov{//设置开发地址
+    function setDevAddr(address addr) external onlyGov{
         require(addr != address(0));
         devAddr = addr;
     }
 
     receive() external payable {}
+}
+
+
+contract BankV2 is Bank {
+
+    function
+
 }
