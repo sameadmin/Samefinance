@@ -655,17 +655,17 @@ IUniswapV2Pair lpToken = IUniswapV2Pair(factory.getPair(token0, token1));
 token0 = lpToken.token0();
 token1 = lpToken.token1();
 
-token0.safeApprove(address(esp),0);
+/*token0.safeApprove(address(esp),0);
 token0.safeApprove(address(esp),uint256(-1));
 
 token1.safeApprove(address(esp),0);
-token1.safeApprove(address(esp),uint256(-1));
+token1.safeApprove(address(esp),uint256(-1));*/
 
-/*token0.safeApprove(address(router),0);
+token0.safeApprove(address(router),0);
 token0.safeApprove(address(router),uint256(-1));
 
 token1.safeApprove(address(router),0);
-token1.safeApprove(address(router),uint256(-1));*/
+token1.safeApprove(address(router),uint256(-1));
 
 {
 lpToken.approve(address(router), uint256(-1));
@@ -692,8 +692,8 @@ if(anotherAmount > 0){
 address[] memory path = new address[](2);
 path[0] = tokenAnother;
 path[1] = tokenUserWant;
-esp.exchange(getArgID(path[0]), getArgID(path[1]),anotherAmount,0);
-//router.swapExactTokensForTokens(anotherAmount, 0, path, address(this), now);//test
+//esp.exchange(getArgID(path[0]), getArgID(path[1]),anotherAmount,0);
+router.swapExactTokensForTokens(anotherAmount, 0, path, address(this), now);//test
 }
 }
 
@@ -715,8 +715,8 @@ if (debt > borrowTokenAmount) {
 address[] memory path = new address[](2);
 path[0] = tokenRelative;
 path[1] = borrowToken;
-esp.exchange(getArgID(path[0]), getArgID(path[1]),tokenRelative.myBalance(),0);
-//router.swapExactTokensForTokens(tokenRelative.myBalance(), 0, path, address(this), now);//test
+//esp.exchange(getArgID(path[0]), getArgID(path[1]),tokenRelative.myBalance(),0);
+router.swapExactTokensForTokens(tokenRelative.myBalance(), 0, path, address(this), now);//test
 }
 }
 

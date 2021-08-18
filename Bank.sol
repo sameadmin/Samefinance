@@ -846,7 +846,7 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         _;
      }
 
-    function getUserPosition(address user) view external returns(Pos[] memory){//获取用户仓位
+    function getUserPosition(address user) view external returns(Pos[] memory){
         uint256[] memory userPos = userPosition[user];
         Pos[] memory p = new Pos[](userPos.length);
         for (uint256 i = 0;i<userPos.length;i++){
@@ -855,7 +855,7 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         return p;
     }
 
-    function getAllPosition()view external returns(Pos[] memory){//获取全部仓位
+    function getAllPosition()view external returns(Pos[] memory){
         Pos[] memory p = new Pos[](currentPos);
         uint256 index;
         for (uint256 i = 0;i<p.length;i++){
@@ -867,7 +867,7 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         return p;
     }
 
-    function getPos(uint256 posid) view internal returns(Pos memory){//获取位置
+    function getPos(uint256 posid) view internal returns(Pos memory){
          Position memory pos = positions[posid];
             Production memory pro = productions[pos.productionId];
                 (, uint256 asset, uint256 loan, ) = positionInfo(posid);
@@ -884,7 +884,7 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
     }
 
     /// @dev Return the BNB debt value given the debt share. Be careful of unaccrued interests.
-    /// @param debtShare The debt share to be converted. DebtShare 要转换的债务份额。
+    /// @param debtShare The debt share to be converted. DebtShare
     function debtShareToVal(address token, uint256 debtShare) public view returns (uint256) {
         TokenBank storage bank = banks[token];
         require(bank.isOpen, 'token not exists');
@@ -1194,6 +1194,9 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
 
 contract BankV2 is Bank {
 
-    function
+    uint256 public xxx;
+    function setxxx(uint256 val) public onlyGov {
+        xxx = val;
+    }
 
 }

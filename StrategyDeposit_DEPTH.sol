@@ -678,12 +678,12 @@ contract StrategyDeposit_DEPTH is Ownable, ReentrancyGuard, Strategy {
     ) internal pure returns (uint256) {
         require(amtA.mul(resB) >= amtB.mul(resA), "Reversed");
 
-        uint256 a = 9996;
-        //uint256 a = 997;
-        uint256 b = uint256(19996).mul(resA);
-        //uint256 b = uint256(1997).mul(resA);
+        //uint256 a = 9996;
+        uint256 a = 997;
+        //uint256 b = uint256(19996).mul(resA);
+        uint256 b = uint256(1997).mul(resA);
         uint256 _c = (amtA.mul(resB)).sub(amtB.mul(resA));
-        uint256 c = _c.mul(10000).div(amtB.add(resB)).mul(resA);
+        //uint256 c = _c.mul(10000).div(amtB.add(resB)).mul(resA);
         uint256 c = _c.mul(1000).div(amtB.add(resB)).mul(resA);
 
         uint256 d = a.mul(c).mul(4);
@@ -757,17 +757,17 @@ contract StrategyDeposit_DEPTH is Ownable, ReentrancyGuard, Strategy {
             borrowToken = borrowToken == address(0) ? WHT : borrowToken;
             tokenRelative = borrowToken == lpToken.token0() ? token1 : token0;
 
-            /*borrowToken.safeApprove(address(router), 0);
-            borrowToken.safeApprove(address(router), uint256(-1));*/
+            borrowToken.safeApprove(address(router), 0);
+            borrowToken.safeApprove(address(router), uint256(-1));
 
-            borrowToken.safeApprove(address(esp),0);
-            borrowToken.safeApprove(address(esp),uint256(-1));
+            /*borrowToken.safeApprove(address(esp),0);
+            borrowToken.safeApprove(address(esp),uint256(-1));*/
 
-            /*tokenRelative.safeApprove(address(router), 0);
-            tokenRelative.safeApprove(address(router), uint256(-1));*/
+            tokenRelative.safeApprove(address(router), 0);
+            tokenRelative.safeApprove(address(router), uint256(-1));
 
-            tokenRelative.safeApprove(address(esp),0);
-            tokenRelative.safeApprove(address(esp),uint256(-1));
+            /*tokenRelative.safeApprove(address(esp),0);
+            tokenRelative.safeApprove(address(esp),uint256(-1));*/
 
             // 3. swap and mint LP tokens.
             calAndSwap(lpToken, borrowToken, tokenRelative);
@@ -815,8 +815,8 @@ contract StrategyDeposit_DEPTH is Ownable, ReentrancyGuard, Strategy {
         if (swapAmt > 0){
             address[] memory path = new address[](2);
             (path[0], path[1]) = isReversed ? (tokenRelative, borrowToken) : (borrowToken, tokenRelative);
-            esp.exchange(getArgID(path[0]), getArgID(path[1]),swapAmt,0);
-            //router.swapExactTokensForTokens(swapAmt, 0, path, address(this), now);
+            //esp.exchange(getArgID(path[0]), getArgID(path[1]),swapAmt,0);
+            router.swapExactTokensForTokens(swapAmt, 0, path, address(this), now);
         }
     }
 

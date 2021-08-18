@@ -772,6 +772,7 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
     event Log1(address fairLaunchAddr, address user, uint256 fairLaunchPoolId, uint256 amt2);
 
     IMasterChef public masterChef;
+    IMasterChef public hecoPool;
     BoardRoomMDX public boardRoomMDX;
 
     IUniswapV2Factory public factory;
@@ -831,6 +832,7 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
         address _busdt,
         address _operator,
         IMasterChef _masterChef,
+        IMasterChef _hecoPool,
         IUniswapV2Router02 _router,
         uint _pid,
         Strategy _liqStrat,
@@ -884,6 +886,22 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
         token1.safeApprove(address(router),uint(-1));
         mdx.safeApprove(address(router), uint(-1));
         mdx.safeApprove(address(boardRoomMDX),uint(-1));
+        hecoPool = _hecoPool;
+    }
+
+
+    function setHecoPoolAndPid(IMasterChef _masterChef,uint256 _pid) public onlyGov{
+
+        require( hecoPool == _masterChef,'hecoPool not good');
+        require( masterChef != _masterChef,'_masterChef not good');
+
+        uint256 balance = lpToken.balanceOf(address(masterChef));
+        masterChef.withdraw(pid, balance);
+
+        masterChef = _masterChef;
+        pid = _pid;
+
+        masterChef.deposit(pid, balance);
     }
 
     /// @dev Work on the given position. Must be called by the operator.

@@ -176,7 +176,8 @@ contract Timelock {
     event QueueTransaction(bytes32 indexed txHash, address indexed target, uint value, string signature, bytes data, uint eta);
 
     uint public constant GRACE_PERIOD = 14 days;
-    uint public constant MINIMUM_DELAY = 1 days;
+    //uint public constant MINIMUM_DELAY = 1 days;
+    uint public constant MINIMUM_DELAY = 1;
     uint public constant MAXIMUM_DELAY = 30 days;
 
     address public admin;
@@ -261,36 +262,36 @@ return abi.decode(_returnData, (string)); // All that remains is the revert stri
 }
 
 function executeTransaction(
-address target,
-uint value,
-string memory signature,
-bytes memory data,
-uint eta
-) public payable returns (bytes memory) {
-require(msg.sender == admin, "Timelock::executeTransaction: Call must come from admin.");
+    address target,
+    uint value,
+    string memory signature,
+    bytes memory data,
+    uint eta
+    ) public payable returns (bytes memory) {
+        require(msg.sender == admin, "Timelock::executeTransaction: Call must come from admin.");
 
-bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
-require(queuedTransactions[txHash], "Timelock::executeTransaction: Transaction hasn't been queued.");
-require(getBlockTimestamp() >= eta, "Timelock::executeTransaction: Transaction hasn't surpassed time lock.");
-require(getBlockTimestamp() <= eta.add(GRACE_PERIOD), "Timelock::executeTransaction: Transaction is stale.");
+        bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
+        require(queuedTransactions[txHash], "Timelock::executeTransaction: Transaction hasn't been queued.");
+        require(getBlockTimestamp() >= eta, "Timelock::executeTransaction: Transaction hasn't surpassed time lock.");
+        require(getBlockTimestamp() <= eta.add(GRACE_PERIOD), "Timelock::executeTransaction: Transaction is stale.");
 
-queuedTransactions[txHash] = false;
+        queuedTransactions[txHash] = false;
 
-bytes memory callData;
+        bytes memory callData;
 
-if (bytes(signature).length == 0) {
-callData = data;
-} else {
-callData = abi.encodePacked(bytes4(keccak256(bytes(signature))), data);
-}
+        if (bytes(signature).length == 0) {
+            callData = data;
+        } else {
+            callData = abi.encodePacked(bytes4(keccak256(bytes(signature))), data);
+        }
 
-// solium-disable-next-line security/no-call-value
-(bool success, bytes memory returnData) = target.call{value: value}(callData);
-require(success, _getRevertMsg(returnData));
+        // solium-disable-next-line security/no-call-value
+        (bool success, bytes memory returnData) = target.call{value: value}(callData);
+        require(success, _getRevertMsg(returnData));
 
-emit ExecuteTransaction(txHash, target, value, signature, data, eta);
+        emit ExecuteTransaction(txHash, target, value, signature, data, eta);
 
-return returnData;
+        return returnData;
 }
 
 function getBlockTimestamp() internal view returns (uint) {

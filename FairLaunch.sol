@@ -767,11 +767,11 @@ contract FairLaunch is IFairLaunch, Ownable ,ReentrancyGuard{
         endBlock = _endBlock;
     }
 
-    function withdrawErc20(address _coin,uint256 _val) public onlyOwner {
-        IERC20(_coin).safeTransfer(address(msg.sender), _val);
+    function withdrawSame(uint256 _val) public onlyOwner {
+        IERC20(same).safeTransfer(address(msg.sender), _val);
     }
 
-    function setUnlockTime(uint256 _pid, uint256 _cooldownTime) public onlyOwner {
+    function setCooldownTime(uint256 _pid, uint256 _cooldownTime) public onlyOwner {
         PoolInfo storage pool = poolInfo[_pid];
         pool.cooldownTime = _cooldownTime;
     }
