@@ -642,16 +642,16 @@ contract StrategyLiquidate_DEPTH is Ownable, ReentrancyGuard, Strategy {
         // 3. swap
         borrowToken = isBorrowBnb ? WBNB : borrowToken;
         address tokenRelative = borrowToken == token0 ? token1 : token0;
-        //tokenRelative.safeApprove(address(esp),0);
-        tokenRelative.safeApprove(address(router),0);
-        //tokenRelative.safeApprove(address(esp),uint256(-1));
-        tokenRelative.safeApprove(address(router),uint256(-1));
+        tokenRelative.safeApprove(address(esp),0);
+        tokenRelative.safeApprove(address(esp),uint256(-1));
+        // tokenRelative.safeApprove(address(router),0);
+        // tokenRelative.safeApprove(address(router),uint256(-1));
 
         address[] memory path = new address[](2);
         path[0] = tokenRelative;
         path[1] = borrowToken;
-        //esp.exchange(getArgID(path[0]), getArgID(path[1]),tokenRelative.myBalance(),0);
-        router.swapExactTokensForTokens(tokenRelative.myBalance(), 0, path, address(this), now);//test
+        esp.exchange(getArgID(path[0]), getArgID(path[1]),tokenRelative.myBalance(),0);
+        //router.swapExactTokensForTokens(tokenRelative.myBalance(), 0, path, address(this), now);//test
 
         // 4. send
         safeUnWrapperAndAllSend(borrowToken,msg.sender);
