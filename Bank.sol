@@ -1033,7 +1033,6 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         uint256 prize = back.mul(config.getLiquidateBps()).div(GLO_VAL);
         uint256 rest = back.sub(prize);
         uint256 left = 0;
-
         if (prize > 0) {
             isBNB? SafeToken.safeTransferETH(devAddr, prize): SafeToken.safeTransfer(production.borrowToken, devAddr, prize);
         }
@@ -1192,11 +1191,3 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
 }
 
 
-contract BankV2 is Bank {
-
-    uint256 public xxx;
-    function setxxx(uint256 val) public onlyGov {
-        xxx = val;
-    }
-
-}

@@ -593,14 +593,14 @@ contract StrategyLiquidate_DEPTH is Ownable, ReentrancyGuard, Strategy {
 
     IUniswapV2Factory public immutable factory;
     IUniswapV2Router02 public immutable router;
-    address public constant WBNB = 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd;
+    address public constant WHT = 0x5545153CCFcA01fbd7Dd11C0b23ba694D9509A6F; //heco wht
 
     IESP public immutable esp;
     mapping(address => int128) public argID;
 
-    address public constant HUSD = 0x60C64b894adDF0D95D1566E2b5E4EEc02bE968E7;
-    /*address public constant USDC = 0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d;//未改*/
-    address public constant USDT = 0x01BF0cEE54E9d308aeDf2BE0C8db2CBa5FD8FDc4;
+    address public constant HUSD = 0x0298c2b32eaE4da002a15f36fdf7615BEa3DA047;//heco husd
+    /*address public constant USDC = 0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d;*/
+    address public constant USDT = 0xa71EdC38d189767582C38A3145b5873052c3e47a;//heco usdt
 
     /// @dev Create a new withdraw minimize trading strategy instance for mdx.
     /// @param _router The mdx router smart contract.
@@ -609,9 +609,9 @@ contract StrategyLiquidate_DEPTH is Ownable, ReentrancyGuard, Strategy {
         router = _router;
 
         esp = _esp;
-        argID[WBNB] = 1;
+        argID[WHT] = 3;
         argID[USDT] = 2;
-        argID[HUSD] = 3;
+        argID[HUSD] = 1;
     }
 
     /// @dev Execute worker strategy. Take LP tokens. Return debt token + token want back.
@@ -640,12 +640,12 @@ contract StrategyLiquidate_DEPTH is Ownable, ReentrancyGuard, Strategy {
         }
 
         // 3. swap
-        borrowToken = isBorrowBnb ? WBNB : borrowToken;
+        borrowToken = isBorrowBnb ? WHT : borrowToken;
         address tokenRelative = borrowToken == token0 ? token1 : token0;
         tokenRelative.safeApprove(address(esp),0);
+        tokenRelative.safeApprove(address(router),0);
         tokenRelative.safeApprove(address(esp),uint256(-1));
-        // tokenRelative.safeApprove(address(router),0);
-        // tokenRelative.safeApprove(address(router),uint256(-1));
+        tokenRelative.safeApprove(address(router),uint256(-1));
 
         address[] memory path = new address[](2);
         path[0] = tokenRelative;
@@ -677,12 +677,12 @@ contract StrategyLiquidate_DEPTH is Ownable, ReentrancyGuard, Strategy {
         return(argID[addr] - 1);
     }
 
-    /// get token balance, if is wbnb un wrapper to Bnb and send to 'to'
+    /// get token balance, if is WHT un wrapper to Bnb and send to 'to'
     function safeUnWrapperAndAllSend(address token, address to) internal {
         uint256 total = SafeToken.myBalance(token);
         if (total > 0) {
-            if (token == WBNB) {
-                IWETH(WBNB).withdraw(total);
+            if (token == WHT) {
+                IWETH(WHT).withdraw(total);
                 SafeToken.safeTransferETH(to, total);
             } else {
                 SafeToken.safeTransfer(token, to, total);

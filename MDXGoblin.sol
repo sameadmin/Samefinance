@@ -34,7 +34,7 @@ pragma solidity ^0.6.0;
 interface IUniswapV2Router02 {
     function factory() external pure returns (address);
 
-    function WETH() external pure returns (address);
+    function WHT() external pure returns (address);
 
     function addLiquidity(
         address tokenA,
@@ -528,6 +528,8 @@ contract IMasterChef {
     function withdraw(uint _pid, uint _amount) external {}
 
     function pending(uint256 _pid, address _user) external view returns (uint256, uint256) {}
+
+    mapping(address => uint256) public LpOfPid;
 }
 
 contract BoardRoomMDX {
@@ -855,7 +857,7 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
         // MDX Pool
         usdt = _busdt;
         operator = _operator;
-        wbnb = _router.WETH();
+        wbnb = _router.WHT();
         router = _router;
         factory = IUniswapV2Factory(_router.factory());
         masterChef = _masterChef;
@@ -891,15 +893,23 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
 
 
     function setHecoPoolAndPid(IMasterChef _masterChef,uint256 _pid) public onlyGov{
-
-        require( hecoPool == _masterChef,'hecoPool not good');
+        //require( hecoPool == _masterChef,'hecoPool not good');
         require( masterChef != _masterChef,'_masterChef not good');
 
-        uint256 balance = lpToken.balanceOf(address(masterChef));
-        masterChef.withdraw(pid, balance);
+        //uint256 balance = lpToken.balanceOf(address(masterChef));
+        uint256 pid_ = masterChef.LpOfPid(address(lpToken));
+        (uint256 balance, , ) = masterChef.userInfo(pid_,address(this));
+
+        masterChef.withdraw(pid_, balance);
+        lpToken.approve(address(masterChef), uint(0));
 
         masterChef = _masterChef;
         pid = _pid;
+        mdx = address(masterChef.mdx());
+
+        lpToken.approve(address(masterChef), uint(-1));
+        mdx.safeApprove(address(boardRoomMDX),uint(-1));
+        mdx.safeApprove(address(router), uint(-1));
 
         masterChef.deposit(pid, balance);
     }
@@ -1042,6 +1052,7 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
 
         // 5.update accMDXPerShare & boardRoom deposit
         accMDXPerShare = accMDXPerShare.add(mdx.myBalance().mul(1e12).div(totalShare));
+
 
         boardRoomMDX.deposit(boardRoomMDXPid,mdx.myBalance());
 

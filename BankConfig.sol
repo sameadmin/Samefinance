@@ -93,6 +93,8 @@ contract Ownable {
     }
 }
 
+
+
 // Part: Uniswap/uniswap-v2-core@1.0.1/IUniswapV2Pair
 
 interface IUniswapV2Pair {
@@ -147,15 +149,15 @@ interface IUniswapV2Pair {
 }
 
 interface IGoblin {
-  function lpToken() external view returns (IUniswapV2Pair);
+    function lpToken() external view returns (IUniswapV2Pair);
 }
 
 // Part: PriceOracle
 
 interface PriceOracle {
-  /// @dev Return the wad price of token0/token1, multiplied by 1e18
-  /// NOTE: (if you have 1 token0 how much you can sell it for token1)
-  function getPrice(address goblin)
+    /// @dev Return the wad price of token0/token1, multiplied by 1e18
+    /// NOTE: (if you have 1 token0 how much you can sell it for token1)
+    function getPrice(address goblin)
     external
     view
     returns (uint price, uint lastUpdate);
@@ -270,114 +272,133 @@ library SafeMath {
 // Part: ERC20Interface
 
 interface ERC20Interface {
-  function balanceOf(address user) external view returns (uint);
+    function balanceOf(address user) external view returns (uint);
+    function decimals() external view returns (uint);
+    //uint256 public decimals;
 }
 
 // Part: SafeToken
 
 library SafeToken {
-  function myBalance(address token) internal view returns (uint) {
-    return ERC20Interface(token).balanceOf(address(this));
-  }
+    function myDecimals (address token) internal view returns (uint){
+        return ERC20Interface(token).decimals();
+    }
 
-  function balanceOf(address token, address user) internal view returns (uint) {
-    return ERC20Interface(token).balanceOf(user);
-  }
+    function myBalance(address token) internal view returns (uint) {
+        return ERC20Interface(token).balanceOf(address(this));
+    }
 
-  function safeApprove(
-    address token,
-    address to,
-    uint value
-  ) internal {
-    // bytes4(keccak256(bytes('approve(address,uint256)')));
-    (bool success, bytes memory data) = token.call(abi.encodeWithSelector(0x095ea7b3, to, value));
-    require(success && (data.length == 0 || abi.decode(data, (bool))), '!safeApprove');
-  }
+    function balanceOf(address token, address user) internal view returns (uint) {
+        return ERC20Interface(token).balanceOf(user);
+    }
 
-  function safeTransfer(
-    address token,
-    address to,
-    uint value
-  ) internal {
-    // bytes4(keccak256(bytes('transfer(address,uint256)')));
-    (bool success, bytes memory data) = token.call(abi.encodeWithSelector(0xa9059cbb, to, value));
-    require(success && (data.length == 0 || abi.decode(data, (bool))), '!safeTransfer');
-  }
+    function safeApprove(
+        address token,
+        address to,
+        uint value
+    ) internal {
+        // bytes4(keccak256(bytes('approve(address,uint256)')));
+        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(0x095ea7b3, to, value));
+        require(success && (data.length == 0 || abi.decode(data, (bool))), '!safeApprove');
+    }
 
-  function safeTransferFrom(
-    address token,
-    address from,
-    address to,
-    uint value
-  ) internal {
-    // bytes4(keccak256(bytes('transferFrom(address,address,uint256)')));
-    (bool success, bytes memory data) =
-      token.call(abi.encodeWithSelector(0x23b872dd, from, to, value));
-    require(success && (data.length == 0 || abi.decode(data, (bool))), '!safeTransferFrom');
-  }
+    function safeTransfer(
+        address token,
+        address to,
+        uint value
+    ) internal {
+        // bytes4(keccak256(bytes('transfer(address,uint256)')));
+        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(0xa9059cbb, to, value));
+        require(success && (data.length == 0 || abi.decode(data, (bool))), '!safeTransfer');
+    }
 
-  function safeTransferBNB(address to, uint value) internal {
-    (bool success, ) = to.call{value:value}(new bytes(0));
-    require(success, '!safeTransferBNB');
-  }
+    function safeTransferFrom(
+        address token,
+        address from,
+        address to,
+        uint value
+    ) internal {
+        // bytes4(keccak256(bytes('transferFrom(address,address,uint256)')));
+        (bool success, bytes memory data) =
+        token.call(abi.encodeWithSelector(0x23b872dd, from, to, value));
+        require(success && (data.length == 0 || abi.decode(data, (bool))), '!safeTransferFrom');
+    }
+
+    function safeTransferBNB(address to, uint value) internal {
+        (bool success, ) = to.call{value:value}(new bytes(0));
+        require(success, '!safeTransferBNB');
+    }
 }
 
 contract BankConfig is IBankConfig, Ownable {
     using SafeToken for address;
     using SafeMath for uint;
 
-    uint256 override public getReserveBps;
-    uint256 override public getLiquidateBps;
-    InterestModel public interestModel;
-    PriceOracle public oracle;
-    mapping(address => uint64) public goblinsMaxPriceDiff;
+uint256 override public getReserveBps;
+uint256 override public getLiquidateBps;
+InterestModel public interestModel;
+PriceOracle public oracle;
+mapping(address => uint64) public goblinsMaxPriceDiff;
 
-    constructor() public {}
+constructor() public {}
 
-    function setParams(uint256 _getReserveBps, uint256 _getLiquidateBps, InterestModel _interestModel,PriceOracle _oracle) public onlyOwner {
-        getReserveBps = _getReserveBps;
-        getLiquidateBps = _getLiquidateBps;
-        interestModel = _interestModel;
-        oracle = _oracle;
-    }
+function setParams(uint256 _getReserveBps, uint256 _getLiquidateBps, InterestModel _interestModel,PriceOracle _oracle) public onlyOwner {
+getReserveBps = _getReserveBps;
+getLiquidateBps = _getLiquidateBps;
+interestModel = _interestModel;
+oracle = _oracle;
+}
 
-    function getInterestRate(uint256 debt, uint256 floating) override external view returns (uint256) {
-        return interestModel.getInterestRate(debt, floating);
-    }
+function getInterestRate(uint256 debt, uint256 floating) override external view returns (uint256) {
+return interestModel.getInterestRate(debt, floating);
+}
 
-    /// @dev Set oracle address. Must be called by owner.
-    function setOracle(PriceOracle _oracle) external onlyOwner {
-        oracle = _oracle;
-    }
+/// @dev Set oracle address. Must be called by owner.
+function setOracle(PriceOracle _oracle) external onlyOwner {
+oracle = _oracle;
+}
 
-    /// @dev Set goblin configurations. Must be called by owner
-    function setConfigs(address[] calldata addrs, uint64[] calldata maxPriceDiff) external onlyOwner {
-        uint len = addrs.length;
-        require(maxPriceDiff.length == len, 'bad len');
-        for (uint idx = 0; idx < len; idx++) {
-            goblinsMaxPriceDiff[addrs[idx]] = maxPriceDiff[idx];
-        }
-    }
+/// @dev Set goblin configurations. Must be called by owner
+function setConfigs(address[] calldata addrs, uint64[] calldata maxPriceDiff) external onlyOwner {
+uint len = addrs.length;
+require(maxPriceDiff.length == len, 'bad len');
+for (uint idx = 0; idx < len; idx++) {
+goblinsMaxPriceDiff[addrs[idx]] = maxPriceDiff[idx];
+}
+}
 
-    /// @dev Return whether the given goblin is stable, presumably not under manipulation.
-    function isStable(address goblin) public override view returns (bool) {
-        IUniswapV2Pair lp = IGoblin(goblin).lpToken();
-        address token0 = lp.token0();
-        address token1 = lp.token1();
-        // 1. Check that reserves and balances are consistent (within 1%)
-        (uint r0, uint r1, ) = lp.getReserves();
-        uint t0bal = token0.balanceOf(address(lp));
-        uint t1bal = token1.balanceOf(address(lp));
-        require(t0bal.mul(100) <= r0.mul(101), 'bad t0 balance');
-        require(t1bal.mul(100) <= r1.mul(101), 'bad t1 balance');
-        // 2. Check that price is in the acceptable range
-        (uint price, uint lastUpdate) = oracle.getPrice(goblin);
-        require(lastUpdate >= now - 1 days, 'price too stale');
-        uint lpPrice = r1.mul(1e18).div(r0);
-        uint maxPriceDiff = goblinsMaxPriceDiff[goblin];
-        require(lpPrice <= price.mul(maxPriceDiff).div(10000), 'price too high');
-        require(lpPrice >= price.mul(10000).div(maxPriceDiff), 'price too low');
-        // 3. Done
-        return true;
-    }
+/// @dev Return whether the given goblin is stable, presumably not under manipulation.
+function isStable(address goblin) public override view returns (bool) {
+IUniswapV2Pair lp = IGoblin(goblin).lpToken();
+
+uint token0Decimals = SafeToken.myDecimals(lp.token0());
+uint token1Decimals = SafeToken.myDecimals(lp.token1());
+(uint r0, uint r1, ) = lp.getReserves();
+
+uint t0bal = lp.token0().balanceOf(address(lp));
+uint t1bal = lp.token1().balanceOf(address(lp));
+
+if(token0Decimals < 18){
+r0 = r0.mul(10 ** (18 - token0Decimals));
+t0bal = t0bal.mul(10 ** (18 - token0Decimals));
+}
+
+if(token1Decimals < 18){
+r1 = r1.mul(10 ** (18 - token1Decimals));
+t1bal = t1bal.mul(10 ** (18 - token0Decimals));
+}
+
+// 1. Check that reserves and balances are consistent (within 1%)
+require(t0bal.mul(100) <= r0.mul(101), 'bad t0 balance');
+require(t1bal.mul(100) <= r1.mul(101), 'bad t1 balance');
+// 2. Check that price is in the acceptable range
+(uint price, uint lastUpdate) = oracle.getPrice(goblin);
+require(lastUpdate >= now - 1 days, 'price too stale');
+uint lpPrice = r1.mul(1e18).div(r0);
+uint maxPriceDiff = goblinsMaxPriceDiff[goblin];
+require(lpPrice <= price.mul(maxPriceDiff).div(10000), 'price too high');
+require(lpPrice >= price.mul(10000).div(maxPriceDiff), 'price too low');
+// 3. Done
+return true;
+}
 }

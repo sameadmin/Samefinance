@@ -631,7 +631,7 @@ contract StrategyDeposit_MDX is Ownable, ReentrancyGuard, Strategy {
 
     IUniswapV2Factory public immutable factory;
     IUniswapV2Router02 public immutable router;
-    address public constant WBNB = 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd;
+    address public constant WHT = 0x5545153CCFcA01fbd7Dd11C0b23ba694D9509A6F; //heco wht
     address public immutable goblin;
 
     /// @dev Create a new add two-side optimal strategy instance for mdx.
@@ -738,18 +738,18 @@ contract StrategyDeposit_MDX is Ownable, ReentrancyGuard, Strategy {
                 borrowToken.safeTransferFrom(msg.sender, address(this), borrow);
             }
             if (token0 == address(0)){
-                token0 = WBNB;
+                token0 = WHT;
                 BnbRelative = token1;
             }
             if (token1 == address(0)){
-                token1 = WBNB;
+                token1 = WHT;
                 BnbRelative = token0;
             }
 
             // change all bnb to wbnb if need.
             uint256 BnbBalance = address(this).balance;
             if (BnbBalance > 0) {
-                IWETH(WBNB).deposit{value:BnbBalance}();
+                IWETH(WHT).deposit{value:BnbBalance}();
             }
         }
         // tokens are all ERC20 token now.
@@ -758,7 +758,7 @@ contract StrategyDeposit_MDX is Ownable, ReentrancyGuard, Strategy {
         // 2. Compute the optimal amount of token0 and token1 to be converted.
         address tokenRelative;
         {
-            borrowToken = borrowToken == address(0) ? WBNB : borrowToken;
+            borrowToken = borrowToken == address(0) ? WHT : borrowToken;
             tokenRelative = borrowToken == lpToken.token0() ? token1 : token0;
 
             borrowToken.safeApprove(address(router), 0);
@@ -790,8 +790,8 @@ contract StrategyDeposit_MDX is Ownable, ReentrancyGuard, Strategy {
     function safeUnWrapperAndAllSend(address token, address to) internal {
         uint256 total = SafeToken.myBalance(token);
         if (total > 0) {
-            if (token == WBNB) {
-                IWETH(WBNB).withdraw(total);
+            if (token == WHT) {
+                IWETH(WHT).withdraw(total);
                 SafeToken.safeTransferETH(to, total);
             } else {
                 SafeToken.safeTransfer(token, to, total);

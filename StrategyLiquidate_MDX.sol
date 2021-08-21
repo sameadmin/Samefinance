@@ -594,107 +594,106 @@ contract StrategyLiquidate_MDX is Ownable, ReentrancyGuard, Strategy {
     using SafeToken for address;
     using SafeMath for uint256;
 
-    IUniswapV2Factory public immutable factory;
-    IUniswapV2Router02 public immutable router;
-    //address public constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
-    address public constant WBNB = 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd;//wht
+IUniswapV2Factory public immutable factory;
+IUniswapV2Router02 public immutable router;
+address public constant WHT = 0x5545153CCFcA01fbd7Dd11C0b23ba694D9509A6F; //heco wht
 
-    /// @dev Create a new withdraw minimize trading strategy instance for mdx.
-    /// @param _router The mdx router smart contract.
-    constructor(IUniswapV2Router02 _router) public {
-        factory = IUniswapV2Factory(_router.factory());
-        router = _router;
-    }
+/// @dev Create a new withdraw minimize trading strategy instance for mdx.
+/// @param _router The mdx router smart contract.
+constructor(IUniswapV2Router02 _router) public {
+factory = IUniswapV2Factory(_router.factory());
+router = _router;
+}
 
-    /// @dev Execute worker strategy. Take LP tokens. Return debt token + token want back.
-    /// @param borrowToken The token user borrow from bank.
-    /// @param data Extra calldata information passed along to this strategy.
-    function execute(address /* user */, address borrowToken , uint256 /* borrow */, uint256 /* debt */, bytes calldata data)
-    override
-    external
-    payable
-    nonReentrant
-    {
-        // 1. Find out lpToken and liquidity.
-        (address _lptoken) = abi.decode(data, (address));
+/// @dev Execute worker strategy. Take LP tokens. Return debt token + token want back.
+/// @param borrowToken The token user borrow from bank.
+/// @param data Extra calldata information passed along to this strategy.
+function execute(address /* user */, address borrowToken , uint256 /* borrow */, uint256 /* debt */, bytes calldata data)
+override
+external
+payable
+nonReentrant
+{
+// 1. Find out lpToken and liquidity.
+(address _lptoken) = abi.decode(data, (address));
 
-        // 2. remove liq
-        IUniswapV2Pair lpToken = IUniswapV2Pair(_lptoken);
-        address token0 = lpToken.token0();
-        address token1 = lpToken.token1();
-        bool isBorrowBnb = borrowToken == address(0);
-        require(borrowToken == token0 || borrowToken == token1 || isBorrowBnb, "borrowToken not token0 and token1");
-        {
-            lpToken.approve(address(router), uint256(-1));
-            router.removeLiquidity(token0, token1, lpToken.balanceOf(address(this)), 0, 0, address(this), now);
-        }
+// 2. remove liq
+IUniswapV2Pair lpToken = IUniswapV2Pair(_lptoken);
+address token0 = lpToken.token0();
+address token1 = lpToken.token1();
+bool isBorrowBnb = borrowToken == address(0);
+require(borrowToken == token0 || borrowToken == token1 || isBorrowBnb, "borrowToken not token0 and token1");
+{
+lpToken.approve(address(router), uint256(-1));
+router.removeLiquidity(token0, token1, lpToken.balanceOf(address(this)), 0, 0, address(this), now);
+}
 
-        // 3. swap
-        borrowToken = isBorrowBnb ? WBNB : borrowToken;
-        address tokenRelative = borrowToken == token0 ? token1 : token0;
-        tokenRelative.safeApprove(address(router), 0);
-        tokenRelative.safeApprove(address(router), uint256(-1));
+// 3. swap
+borrowToken = isBorrowBnb ? WHT : borrowToken;
+address tokenRelative = borrowToken == token0 ? token1 : token0;
+tokenRelative.safeApprove(address(router), 0);
+tokenRelative.safeApprove(address(router), uint256(-1));
 
-        address[] memory path = new address[](2);
-        path[0] = tokenRelative;
-        path[1] = borrowToken;
-        router.swapExactTokensForTokens(tokenRelative.myBalance(), 0, path, address(this), now);
+address[] memory path = new address[](2);
+path[0] = tokenRelative;
+path[1] = borrowToken;
+router.swapExactTokensForTokens(tokenRelative.myBalance(), 0, path, address(this), now);
 
-        // 4. send
-        safeUnWrapperAndAllSend(borrowToken,msg.sender);
+// 4. send
+safeUnWrapperAndAllSend(borrowToken,msg.sender);
 
-    }
+}
 
-    /// swap if need.
-    function swapIfNeed(address borrowToken, address tokenRelative, uint256 debt) internal {
-        uint256 borrowTokenAmount = borrowToken.myBalance();
-        if (debt > borrowTokenAmount) {
-            tokenRelative.safeApprove(address(router), 0);
-            tokenRelative.safeApprove(address(router), uint256(-1));
+/// swap if need.
+function swapIfNeed(address borrowToken, address tokenRelative, uint256 debt) internal {
+uint256 borrowTokenAmount = borrowToken.myBalance();
+if (debt > borrowTokenAmount) {
+tokenRelative.safeApprove(address(router), 0);
+tokenRelative.safeApprove(address(router), uint256(-1));
 
-            uint256 remainingDebt = debt.sub(borrowTokenAmount);
-            address[] memory path = new address[](2);
-            path[0] = tokenRelative;
-            path[1] = borrowToken;
-            router.swapTokensForExactTokens(remainingDebt, tokenRelative.myBalance(), path, address(this), now);
-        }
-    }
+uint256 remainingDebt = debt.sub(borrowTokenAmount);
+address[] memory path = new address[](2);
+path[0] = tokenRelative;
+path[1] = borrowToken;
+router.swapTokensForExactTokens(remainingDebt, tokenRelative.myBalance(), path, address(this), now);
+}
+}
 
-    /// get token balance, if is wbnb un wrapper to Bnb and send to 'to'
-    function safeUnWrapperAndAllSend(address token, address to) internal {
-        uint256 total = SafeToken.myBalance(token);
-        if (total > 0) {
-            if (token == WBNB) {
-                IWETH(WBNB).withdraw(total);
-                SafeToken.safeTransferETH(to, total);
-            } else {
-                SafeToken.safeTransfer(token, to, total);
-            }
-        }
-    }
+/// get token balance, if is wbnb un wrapper to Bnb and send to 'to'
+function safeUnWrapperAndAllSend(address token, address to) internal {
+uint256 total = SafeToken.myBalance(token);
+if (total > 0) {
+if (token == WHT) {
+IWETH(WHT).withdraw(total);
+SafeToken.safeTransferETH(to, total);
+} else {
+SafeToken.safeTransfer(token, to, total);
+}
+}
+}
 
-    /// @param minter The address of MDex SwapMining contract.
-    /// @param pid pid pid of pair in SwapMining config.
-    function getSwapReward(address minter, uint256 pid) public view returns (uint256, uint256) {
-        ISwapMining swapMining = ISwapMining(minter);
-        return swapMining.getUserReward(pid);
-    }
+/// @param minter The address of MDex SwapMining contract.
+/// @param pid pid pid of pair in SwapMining config.
+function getSwapReward(address minter, uint256 pid) public view returns (uint256, uint256) {
+ISwapMining swapMining = ISwapMining(minter);
+return swapMining.getUserReward(pid);
+}
 
-    /// @param minter The address of MDex SwapMining contract.
-    /// @param token Token of reward. Result of pairOfPid(lpTokenAddress)
-    function swapMiningReward(address minter, address token) external onlyOwner{
-        ISwapMining swapMining = ISwapMining(minter);
-        swapMining.takerWithdraw();
-        token.safeTransfer(msg.sender, token.myBalance());
-    }
+/// @param minter The address of MDex SwapMining contract.
+/// @param token Token of reward. Result of pairOfPid(lpTokenAddress)
+function swapMiningReward(address minter, address token) external onlyOwner{
+ISwapMining swapMining = ISwapMining(minter);
+swapMining.takerWithdraw();
+token.safeTransfer(msg.sender, token.myBalance());
+}
 
-    /// @dev Recover ERC20 tokens that were accidentally sent to this smart contract.
-    /// @param token The token contract. Can be anything. This contract should not hold ERC20 tokens.
-    /// @param to The address to send the tokens to.
-    /// @param value The number of tokens to transfer to `to`.
-    function recover(address token, address to, uint256 value) external onlyOwner nonReentrant {
-        token.safeTransfer(to, value);
-    }
+/// @dev Recover ERC20 tokens that were accidentally sent to this smart contract.
+/// @param token The token contract. Can be anything. This contract should not hold ERC20 tokens.
+/// @param to The address to send the tokens to.
+/// @param value The number of tokens to transfer to `to`.
+function recover(address token, address to, uint256 value) external onlyOwner nonReentrant {
+token.safeTransfer(to, value);
+}
 
-    receive() external payable {}
+receive() external payable {}
 }

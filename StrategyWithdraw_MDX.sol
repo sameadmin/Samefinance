@@ -591,7 +591,7 @@ contract StrategyWithdraw_MDX is Ownable, ReentrancyGuard, Strategy {
 
     IUniswapV2Factory public immutable factory;
     IUniswapV2Router02 public immutable router;
-    address public constant WBNB = 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd;
+    address public constant WHT = 0x5545153CCFcA01fbd7Dd11C0b23ba694D9509A6F; //heco wht
 
     /// @dev Create a new withdraw minimize trading strategy instance for mdx.
     /// @param _router The  router smart contract.
@@ -618,17 +618,17 @@ contract StrategyWithdraw_MDX is Ownable, ReentrancyGuard, Strategy {
 
         // is borrowToken is bnb.
         bool isBorrowBNB = borrowToken == address(0);
-        borrowToken = isBorrowBNB ? WBNB : borrowToken;
+        borrowToken = isBorrowBNB ? WHT : borrowToken;
 
         // the relative token when token0 or token1 is ht.
         address bnbRelative = address(0);
         {
             if (token0 == address(0)){
-                token0 = WBNB;
+                token0 = WHT;
                 bnbRelative = token1;
             }
             if (token1 == address(0)){
-                token1 = WBNB;
+                token1 = WHT;
                 bnbRelative = token0;
             }
         }
@@ -653,7 +653,7 @@ contract StrategyWithdraw_MDX is Ownable, ReentrancyGuard, Strategy {
             swapIfNeed(borrowToken, tokenRelative, debt);
 
             if (isBorrowBNB) {
-                IWETH(WBNB).withdraw(debt);
+                IWETH(WHT).withdraw(debt);
                 SafeToken.safeTransferETH(msg.sender, debt);
             } else {
                 SafeToken.safeTransfer(borrowToken, msg.sender, debt);
@@ -680,7 +680,7 @@ contract StrategyWithdraw_MDX is Ownable, ReentrancyGuard, Strategy {
             token0.safeTransfer(user, token0.myBalance());
             token1.safeTransfer(user, token1.myBalance());
             } else {
-            safeUnWrapperAndAllSend(WBNB, user);
+            safeUnWrapperAndAllSend(WHT, user);
             safeUnWrapperAndAllSend(bnbRelative, user);
             }
 
@@ -706,8 +706,8 @@ contract StrategyWithdraw_MDX is Ownable, ReentrancyGuard, Strategy {
     function safeUnWrapperAndAllSend(address token, address to) internal {
         uint256 total = SafeToken.myBalance(token);
         if (total > 0) {
-            if (token == WBNB) {
-                IWETH(WBNB).withdraw(total);
+            if (token == WHT) {
+                IWETH(WHT).withdraw(total);
                 SafeToken.safeTransferETH(to, total);
             } else {
                 SafeToken.safeTransfer(token, to, total);
