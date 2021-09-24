@@ -857,10 +857,10 @@ contract FairLaunch is IFairLaunch, Ownable ,ReentrancyGuard{
         return poolInfo.length;
     }
 
-    function manualMint(address _to, uint256 _amount) public onlyOwner {
+    /*function manualMint(address _to, uint256 _amount) public onlyOwner {
         ISAME(address(same)).mint(_to, _amount);
         emit ManualMint(_to,_amount);
-    }
+    }*/
 
     // Return reward multiplier over the given _from to _to block.
     function getMultiplier(uint256 _lastRewardBlock, uint256 _currentBlock) public view returns (uint256) {

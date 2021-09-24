@@ -34,7 +34,7 @@ pragma solidity ^0.6.0;
 interface IUniswapV2Router02 {
     function factory() external pure returns (address);
 
-    function WHT() external pure returns (address);
+    function WETH() external pure returns (address);
 
     function addLiquidity(
         address tokenA,
@@ -494,68 +494,44 @@ interface IUniswapV2Factory {
     function setFeeToSetter(address) external;
 }
 
+
+
 // Use Contract instead of Interface here
 contract IMasterChef {
     // Info of each user.
     struct UserInfo {
-        uint256 amount;     // How many LP tokens the user has provided.
-        uint256 rewardDebt; // Reward debt.
-        uint256 multLpRewardDebt; //multLp Reward debt.
+        uint amount; // How many LP tokens the user has provided.
+        uint rewardDebt; // Reward debt. See explanation below.
     }
 
     // Info of each pool.
     struct PoolInfo {
-        IERC20 lpToken;           // Address of LP token contract.
-        uint256 allocPoint;       // How many allocation points assigned to this pool. MDXs to distribute per block.
-        uint256 lastRewardBlock;  // Last block number that MDXs distribution occurs.
-        uint256 accMdxPerShare; // Accumulated MDXs per share, times 1e12.
-        uint256 accMultLpPerShare; //Accumulated multLp per share
-        uint256 totalAmount;    // Total amount of current pool deposit.
+        IERC20 lpToken; // Address of LP token contract.
+        uint allocPoint; // How many allocation points assigned to this pool. CAKEs to distribute per block.
+        uint lastRewardBlock; // Last block number that CAKEs distribution occurs.
+        uint accPuddingPerShare; // Accumulated Puddingper share, times 1e12. See below.
     }
 
-    address public mdx;
-
-    // Info of each pool.
-    PoolInfo[] public poolInfo;
+    address public pud;
 
     // Info of each user that stakes LP tokens.
-    mapping(uint256 => mapping(address => UserInfo)) public userInfo;
+    mapping(uint => PoolInfo) public poolInfo;
+    mapping(uint => mapping(address => UserInfo)) public userInfo;
 
     // Deposit LP tokens to MasterChef for CAKE allocation.
-    function deposit(uint _pid, uint _amount) external {}
+    function deposit(uint _pid, uint _amount) public {}
 
     // Withdraw LP tokens from MasterChef.
-    function withdraw(uint _pid, uint _amount) external {}
-
-    function pending(uint256 _pid, address _user) external view returns (uint256, uint256) {}
-
-    mapping(address => uint256) public LpOfPid;
+    function withdraw(uint _pid, uint _amount) public {}
 }
 
-contract BoardRoomMDX {
-    /*struct UserInfo {
-        uint256 amount;
-        uint256 rewardDebt;
-    }
+contract PudPool {
 
-    struct PoolInfo {
-        IERC20 lpToken;
-        uint256 allocPoint;
-        uint256 lastRewardBlock;
-        uint256 accMDXPerShare;
-        uint256 mdxAmount;
-    }
+    function enterStaking(uint256 _amount) public{}
+    function leaveStaking(uint256 _amount) public{}
+    /*function deposit( uint256 _amount) public {}
+    function withdraw( uint256 _amount) public {}*/
 
-    address public mdx;
-
-    // Info of each pool.
-    PoolInfo[] public poolInfo;
-    // Info of each user that stakes LP tokens.
-    mapping(uint256 => mapping(address => UserInfo)) public userInfo;*/
-
-    function deposit(uint256 _pid, uint256 _amount) public {}
-    function withdraw(uint256 _pid, uint256 _amount) public {}
-    /*function pending(uint256 _pid, address _user) external view returns (uint256) {}*/
 }
 
 library SafeToken {
@@ -761,7 +737,7 @@ interface IFairLaunch {
 }
 
 
-contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
+contract PudGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
     /// @notice Libraries
     using SafeToken for address;
     using SafeMath for uint;
@@ -775,7 +751,7 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
 
     IMasterChef public masterChef;
     IMasterChef public hecoPool;
-    BoardRoomMDX public boardRoomMDX;
+    PudPool public pudPool;
 
     IUniswapV2Factory public factory;
     IUniswapV2Router02 public router;
@@ -785,9 +761,9 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
     address public usdt;
 
     uint256 public pid;
-    uint256 public boardRoomMDXPid;
+    uint256 public pudPoolPid;
 
-    address public mdx;
+    address public pud;
     address public fairLaunchAddr;
     uint256 public fairLaunchPoolId;
 
@@ -814,7 +790,7 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
 
     Strategy public liqStrat;
 
-    uint256 public accMDXPerShare;
+    uint256 public accPUDPerShare;
 
     mapping(address => bool) public killWhitelist;
 
@@ -843,21 +819,21 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
         address _devAddr,
         address _fairLaunchAddr,
         address _baseToken,
-        BoardRoomMDX _boardRoom,
+        PudPool _pudPool,
         uint _boardPID
 
     ) external initializer {
         __Governable__init();
         __ReentrancyGuardUpgradeSafe__init();
 
-        // BoardRoomHMDX
-        boardRoomMDX = _boardRoom;
-        boardRoomMDXPid = _boardPID;
+        // BoardRoomHPUD
+        pudPool = _pudPool;
+        pudPoolPid = _boardPID;
 
-        // MDX Pool
+        // PUD Pool
         usdt = _busdt;
         operator = _operator;
-        wbnb = _router.WHT();
+        wbnb = _router.WETH();
         router = _router;
         factory = IUniswapV2Factory(_router.factory());
         masterChef = _masterChef;
@@ -867,7 +843,7 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
 
         // Get lpToken and fToken from MasterChef pool
         pid = _pid;
-        (IERC20 _lpToken, , , , , ) = masterChef.poolInfo(_pid);
+        (IERC20 _lpToken, , ,  ) = masterChef.poolInfo(_pid);
         lpToken = IUniswapV2Pair(address(_lpToken));
 
         baseToken = _baseToken;
@@ -875,7 +851,7 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
         token1 = lpToken.token1();
         farmingToken = token0 == baseToken ? token1 : token0;
 
-        mdx = address(masterChef.mdx());
+        pud = address(masterChef.pud());
 
         liqStrat = _liqStrat;
 
@@ -886,32 +862,32 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
         lpToken.approve(address(router), uint(-1));
         token0.safeApprove(address(router), uint(-1));
         token1.safeApprove(address(router),uint(-1));
-        mdx.safeApprove(address(router), uint(-1));
-        mdx.safeApprove(address(boardRoomMDX),uint(-1));
+        pud.safeApprove(address(router), uint(-1));
+        pud.safeApprove(address(pudPool),uint(-1));
         hecoPool = _hecoPool;
     }
 
 
-    function setHecoPoolAndPid(IMasterChef _masterChef,uint256 _pid) public onlyGov{
+    function setFarmPoolAndPid(IMasterChef _masterChef,uint256 oldPid,uint256 newPid) public onlyGov{
         //require( hecoPool == _masterChef,'hecoPool not good');
         require( masterChef != _masterChef,'_masterChef not good');
 
         //uint256 balance = lpToken.balanceOf(address(masterChef));
-        uint256 pid_ = masterChef.LpOfPid(address(lpToken));
-        (uint256 balance, , ) = masterChef.userInfo(pid_,address(this));
+        //uint256 oldPid = masterChef.LpOfPid(address(lpToken));
+        (uint256 balance,  ) = masterChef.userInfo(oldPid,address(this));
 
-        masterChef.withdraw(pid_, balance);
+        masterChef.withdraw(oldPid, balance);
         lpToken.approve(address(masterChef), uint(0));
 
         masterChef = _masterChef;
-        pid = _pid;
-        mdx = address(masterChef.mdx());
+
+        pud = address(masterChef.pud());
 
         lpToken.approve(address(masterChef), uint(-1));
-        mdx.safeApprove(address(boardRoomMDX),uint(-1));
-        mdx.safeApprove(address(router), uint(-1));
+        pud.safeApprove(address(pudPool),uint(-1));
+        pud.safeApprove(address(router), uint(-1));
 
-        masterChef.deposit(pid, balance);
+        masterChef.deposit(newPid, balance);
     }
 
     /// @dev Work on the given position. Must be called by the operator.
@@ -1036,30 +1012,30 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
     }
 
     function _reinvest() internal {
-        // 1.Receive MDX
+        // 1.Receive PUD
         masterChef.withdraw(pid, 0);
 
-        // 2.Receive MDX
-        boardRoomMDX.withdraw(boardRoomMDXPid,0);
+        // 2.Receive PUD
+        pudPool.leaveStaking(0);
 
-        // 3.MDX
-        uint256 mdxBalance = mdx.myBalance();
-        if(mdxBalance == 0 || totalShare == 0) return;
+        // 3.PUD
+        uint256 pudBalance = pud.myBalance();
+        if(pudBalance == 0 || totalShare == 0) return;
 
         // 4. Send the reward bounty to the caller.
-        uint fee = mdxBalance.mul(feeBps) / 10000;
-        mdx.safeTransfer(devAddr,fee);
+        uint fee = pudBalance.mul(feeBps) / 10000;
+        pud.safeTransfer(devAddr,fee);
 
-        // 5.update accMDXPerShare & boardRoom deposit
-        accMDXPerShare = accMDXPerShare.add(mdx.myBalance().mul(1e12).div(totalShare));
+        // 5.update accPUDPerShare & boardRoom deposit
+        accPUDPerShare = accPUDPerShare.add(pud.myBalance().mul(1e12).div(totalShare));
 
 
-        boardRoomMDX.deposit(boardRoomMDXPid,mdx.myBalance());
+        pudPool.enterStaking(pud.myBalance());
 
     }
 
     function earned(address _user) public view returns (uint256) {
-        uint256 pending = userShare[_user].mul(accMDXPerShare).div(1e12).sub(rewardDebt[_user]);
+        uint256 pending = userShare[_user].mul(accPUDPerShare).div(1e12).sub(rewardDebt[_user]);
         return userReward[_user].add(pending);
     }
 
@@ -1067,16 +1043,16 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
     function harvest() public onlyEOA nonReentrant{
         _reinvest();
         _harvest(msg.sender);
-        rewardDebt[msg.sender] = userShare[msg.sender].mul(accMDXPerShare).div(1e12);
+        rewardDebt[msg.sender] = userShare[msg.sender].mul(accPUDPerShare).div(1e12);
         uint256 rew = userReward[msg.sender];
         userReward[msg.sender] = 0;
-        boardRoomMDX.withdraw(boardRoomMDXPid,rew);
-        mdx.safeTransfer(msg.sender,rew);
+        pudPool.leaveStaking(rew);
+        pud.safeTransfer(msg.sender,rew);
     }
 
     function _harvest(address _user) internal {
         if(userShare[_user] > 0) {
-            uint256 pending = userShare[_user].mul(accMDXPerShare).div(1e12).sub(rewardDebt[_user]);
+            uint256 pending = userShare[_user].mul(accPUDPerShare).div(1e12).sub(rewardDebt[_user]);
             userReward[_user] = userReward[_user].add(pending);
         }
     }
@@ -1085,7 +1061,7 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
     /// @param share The number of shares to be converted to LP balance.
     function shareToBalance(uint share) public view returns (uint) {
         if (totalShare == 0) return share; // When there's no share, 1 share = 1 balance.
-        (uint totalBalance, ,) = masterChef.userInfo(pid, address(this));
+        (uint totalBalance, ) = masterChef.userInfo(pid, address(this));
         return share.mul(totalBalance).div(totalShare);
     }
 
@@ -1093,7 +1069,7 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
     /// @param balance the number of LP tokens to be converted to shares.
     function balanceToShare(uint balance) public view returns (uint) {
         if (totalShare == 0) return balance; // When there's no share, 1 share = 1 balance.
-        (uint totalBalance, ,) = masterChef.userInfo(pid, address(this));
+        (uint totalBalance, ) = masterChef.userInfo(pid, address(this));
         return balance.mul(totalShare).div(totalBalance);
     }
 
@@ -1108,7 +1084,7 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
 
             shares[id] = shares[id].add(share);
             userShare[user] = userShare[user].add(share);
-            rewardDebt[user] = userShare[user].mul(accMDXPerShare).div(1e12);
+            rewardDebt[user] = userShare[user].mul(accPUDPerShare).div(1e12);
 
             totalShare = totalShare.add(share);
             emit AddShare(id, share);
@@ -1124,7 +1100,7 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
             totalShare = totalShare.sub(share);
             shares[id] = 0;
             userShare[user] = userShare[user].sub(share);
-            rewardDebt[user] = userShare[user].mul(accMDXPerShare).div(1e12);
+            rewardDebt[user] = userShare[user].mul(accPUDPerShare).div(1e12);
 
             masterChef.withdraw(pid, balance);
             _fairLaunchWithdraw(user,share);
@@ -1228,5 +1204,5 @@ contract MDXGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
         killWhitelist[addr] = status;
     }
 
-    receive() external payable {}
+receive() external payable {}
 }
