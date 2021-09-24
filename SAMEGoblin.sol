@@ -247,8 +247,8 @@ contract IMasterChef {
 
 contract PudPool {
 
-    function deposit(uint256 _pid, uint256 _amount) public {}
-    function withdraw(uint256 _pid, uint256 _amount) public {}
+    function enterStaking(uint256 _amount) public{}
+    function leaveStaking(uint256 _amount) public{}
     /*function deposit( uint256 _amount) public {}
     function withdraw( uint256 _amount) public {}*/
 
@@ -701,7 +701,7 @@ contract SameGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
         masterChef.withdraw(pid, 0);
 
         // 2.Receive PUD
-        pudPool.withdraw(pudPoolPid,0);
+        pudPool.leaveStaking(0);
 
         // 3.PUD
         uint256 pudBalance = pud.myBalance();
@@ -715,7 +715,7 @@ contract SameGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
         accPUDPerShare = accPUDPerShare.add(pud.myBalance().mul(1e12).div(totalShare));
 
 
-        pudPool.deposit(pudPoolPid,pud.myBalance());
+        pudPool.enterStaking(pud.myBalance());
 
     }
 
@@ -731,7 +731,7 @@ contract SameGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
         rewardDebt[msg.sender] = userShare[msg.sender].mul(accPUDPerShare).div(1e12);
         uint256 rew = userReward[msg.sender];
         userReward[msg.sender] = 0;
-        pudPool.withdraw(pudPoolPid,rew);
+        pudPool.leaveStaking(rew);
         pud.safeTransfer(msg.sender,rew);
     }
 
