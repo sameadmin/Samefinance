@@ -800,6 +800,7 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         uint256 maxDebt;
         uint256 openFactor;
         uint256 liquidateFactor;
+        bool isStable;
     }
 
     struct Position {
@@ -1003,7 +1004,9 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
 
             require(debt >= production.minDebt && debt <= production.maxDebt, "Debt scale is out of scope");
             uint256 health = Goblin(production.goblin).health(posId, production.borrowToken);
-            require(config.isStable(production.goblin),"!goblin");
+            if(production.isStable){
+                require(config.isStable(production.goblin),"!goblin");
+            }
             require(health.mul(production.openFactor) >= debt.mul(GLO_VAL), "bad work factor");
 
             _addDebt(posId, production, debt);
@@ -1109,7 +1112,8 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         uint256 minDebt,
         uint256 maxDebt,
         uint256 openFactor,
-        uint256 liquidateFactor
+        uint256 liquidateFactor,
+        bool isStable
         ) external onlyGov {
 
         if(pid == 0){
@@ -1131,6 +1135,8 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         production.maxDebt = maxDebt;
         production.openFactor = openFactor;
         production.liquidateFactor = liquidateFactor;
+
+        production.isStable = isStable;
     }
 
     function calInterest(address token) public {

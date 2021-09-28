@@ -645,6 +645,11 @@ contract SameGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
         Strategy(strategy).execute{value:msg.value}(user, borrowToken, borrow, debt, ext);
         // 3. Add LP tokens back to the farming pool.
         _addShare(id,user);
+
+        uint256 borrowTokenAmount = borrowToken.myBalance();
+        if(borrowTokenAmount > 0){
+            SafeToken.safeTransfer(borrowToken, msg.sender, borrowTokenAmount);
+        }
     }
 
     /// @dev Liquidate the given position by converting it to debtToken and return back to caller.

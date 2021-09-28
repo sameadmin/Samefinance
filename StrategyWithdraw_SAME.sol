@@ -269,15 +269,14 @@ library SafeToken {
 
 interface Strategy {
     function execute(address user, address borrowToken, uint256 borrow, uint256 debt, bytes calldata data) external payable;
-
 }
-
 
 interface IESP {
     function remove_liquidity_one_coin(uint256 _token_amount,int128 i,uint256 min_amount) external;
     function get_virtual_price() external view returns (uint256);
     function calc_withdraw_one_coin(uint256 _token_amount,int128 i) external view returns (uint256);
     function exchange(int128 i, int128 j, uint256 dx, uint256 min_dy) external;
+    function get_dy(int128 i, int128 j, uint256 dx)external view returns (uint256);
 }
 
 interface Goblin {
@@ -327,17 +326,30 @@ contract StrategyWithdraw_SAME is Ownable, ReentrancyGuard, Strategy {
         require(borrowToken == token0 || borrowToken == token1, "borrowToken not token0 and token1");
         require(whichWantBack == uint(0) || whichWantBack == uint(1),"whichWantBack not in (0,1)");
         address whichToken = whichWantBack == 0 ? token0:token1;
-        lpToken.safeApprove(address(esp), uint256(- 1));
+        lpToken.safeApprove(address(esp), uint256(-1));
         removeError(whichToken);
-        if(debt > 0 || borrowToken == whichToken){
-            esp.remove_liquidity_one_coin(lpToken.balanceOf(address(this)),getArgID(borrowToken),0);
-            if(debt > 0){
-                borrowToken.safeTransfer(msg.sender, debt);
+        if(debt > 0){
+            if(whichToken != borrowToken){
+                removeError(borrowToken);
             }
+            esp.remove_liquidity_one_coin(lpToken.balanceOf(address(this)),getArgID(borrowToken),0);
+            borrowToken.safeTransfer(msg.sender, debt);
+            uint256 borrowTokenBalance = borrowToken.balanceOf(address(this));
             if(whichToken == borrowToken){
-                borrowToken.safeTransfer(user,borrowToken.balanceOf(address(this)));
+                borrowToken.safeTransfer(user,borrowTokenBalance);
             }else{
-                esp.exchange(getArgID(borrowToken), getArgID(whichToken),borrowToken.balanceOf(address(this)),0);
+                token0.safeApprove(address(esp), 0);
+                token0.safeApprove(address(esp), uint256(-1));
+
+                token1.safeApprove(address(esp), 0);
+                token1.safeApprove(address(esp), uint256(-1));
+
+                uint256 min_dy = esp.get_dy(getArgID(borrowToken),getArgID(whichToken),borrowTokenBalance);
+                min_dy = min_dy.mul(99).div(100);
+                esp.exchange(getArgID(borrowToken),
+                    getArgID(whichToken),
+                    borrowTokenBalance,
+                    min_dy);
                 whichToken.safeTransfer(user,whichToken.balanceOf(address(this)));
             }
         }else{
