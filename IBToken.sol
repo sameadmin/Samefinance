@@ -1,5 +1,5 @@
 /**
- *Submitted for verification at BscScan.com on 2021-07-18
+ *Submitted for verification at BscScan.com on 2021-05-20
 */
 
 // SPDX-License-Identifier: UNLICENSED
@@ -13,8 +13,6 @@ interface BankConfig {
     function getReserveBps() external view returns (uint256);
 
     function getLiquidateBps() external view returns (uint256);
-
-    function isStable(address goblin) external view returns (bool);
 }
 
 // Part: ERC20Interface
@@ -250,7 +248,7 @@ library SafeMath {
      * - Subtraction cannot overflow.
      */
     function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b <= a, "SafeMath: subtraction overflOw");
+        require(b <= a, "SafeMath: subtraction overflow");
         uint256 c = a - b;
 
         return c;
@@ -739,10 +737,9 @@ contract IBToken is ERC20, Ownable {
     event Mint(address sender, address account, uint amount);
     event Burn(address sender, address account, uint amount);
 
-    constructor(string memory _symbol,uint8 _decimals) public {
+    constructor(string memory _symbol) public {
         name = _symbol;
         symbol = _symbol;
-        decimals = _decimals;
     }
 
     function mint(address account, uint256 amount) public onlyOwner {
@@ -757,8 +754,8 @@ contract IBToken is ERC20, Ownable {
 }
 
 contract IBTokenFactory {
-    function genIBToken(string memory _symbol,uint8 _decimals) public returns(address) {
-        return address(new IBToken(_symbol,_decimals));
+    function genIBToken(string memory _symbol) public returns(address) {
+        return address(new IBToken(_symbol));
     }
 }
 
@@ -768,30 +765,30 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
       /// @notice Libraries
   using SafeToken for address;
   using SafeMath for uint;
-
+  
     /// @notice Events
     event AddDebt(uint indexed id, uint debtShare);
     event RemoveDebt(uint indexed id, uint debtShare);
     event Work(uint256 indexed id, uint256 debt, uint back);
     event Kill(uint256 indexed id, address indexed killer, uint256 prize, uint256 left);
     uint256 constant GLO_VAL = 10000;
-
+    
     struct TokenBank {
-        address tokenAddr;
-        address ibTokenAddr;
+        address tokenAddr; 
+        address ibTokenAddr; 
         bool isOpen;
-        bool canDeposit;
-        bool canWithdraw;
+        bool canDeposit; 
+        bool canWithdraw; 
         uint256 totalVal;
         uint256 totalDebt;
         uint256 totalDebtShare;
         uint256 totalReserve;
         uint256 lastInterestTime;
     }
-
+    
     struct Production {
         address coinToken;
-        address currencyToken;
+        address currencyToken; 
         address borrowToken;
         bool isOpen;
         bool canBorrow;
@@ -800,24 +797,23 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         uint256 maxDebt;
         uint256 openFactor;
         uint256 liquidateFactor;
-        bool isStable;
     }
-
+    
     struct Position {
-        address owner;
+        address owner; 
         uint256 productionId;
         uint256 debtShare;
     }
-
+    
     BankConfig public config;
     mapping(address => TokenBank) public banks;
-
+    
     mapping(uint256 => Production) public productions;
     uint256 public currentPid;
-
+    
     mapping(uint256 => Position) public positions;
     uint256 public currentPos;
-
+    
     mapping(address => uint256[]) public userPosition;
 
 
@@ -830,10 +826,10 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         uint256 totalValue;
         address goblin;
     }
-
+    
     mapping(address => bool) public killWhitelist;
     address public devAddr;
-
+    
     function initialize(BankConfig _config) external initializer {
         __Governable__init();
         __ReentrancyGuardUpgradeSafe__init();
@@ -847,7 +843,7 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         require(msg.sender == tx.origin, 'not eoa');
         _;
      }
-
+      
     function getUserPosition(address user) view external returns(Pos[] memory){
         uint256[] memory userPos = userPosition[user];
         Pos[] memory p = new Pos[](userPos.length);
@@ -856,7 +852,7 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         }
         return p;
     }
-
+    
     function getAllPosition()view external returns(Pos[] memory){
         Pos[] memory p = new Pos[](currentPos);
         uint256 index;
@@ -868,7 +864,7 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         }
         return p;
     }
-
+    
     function getPos(uint256 posid) view internal returns(Pos memory){
          Position memory pos = positions[posid];
             Production memory pro = productions[pos.productionId];
@@ -882,59 +878,59 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
                     totalValue:loan,
                     goblin:pro.goblin
                 });
-
+            
     }
-
+    
     /// @dev Return the BNB debt value given the debt share. Be careful of unaccrued interests.
-    /// @param debtShare The debt share to be converted. DebtShare
+    /// @param debtShare The debt share to be converted.
     function debtShareToVal(address token, uint256 debtShare) public view returns (uint256) {
         TokenBank storage bank = banks[token];
         require(bank.isOpen, 'token not exists');
         if (bank.totalDebtShare == 0) return debtShare;
         return debtShare.mul(bank.totalDebt).div(bank.totalDebtShare);
     }
-
+    
     /// @dev Return the debt share for the given debt value. Be careful of unaccrued interests.
-    /// @param debtVal The debt value to be converted. DebtVal
+    /// @param debtVal The debt value to be converted.
     function debtValToShare(address token, uint256 debtVal) public view returns (uint256) {
         TokenBank storage bank = banks[token];
         require(bank.isOpen, 'token not exists');
         if (bank.totalDebt == 0) return debtVal;
         return debtVal.mul(bank.totalDebtShare).div(bank.totalDebt);
     }
-
+    
     function totalToken(address token) public view returns (uint256) {
         TokenBank storage bank = banks[token];
-        require(bank.isOpen, 'token not exists');
+        require(bank.isOpen, 'token not exists');    
         uint balance = token == address(0) ? address(this).balance : SafeToken.myBalance(token);
         balance = bank.totalVal < balance? bank.totalVal: balance;
         return balance.add(bank.totalDebt).sub(bank.totalReserve);
     }
-
+    
     function positionInfo(uint256 posId) public view returns (uint256, uint256, uint256, address) {
         Position storage pos = positions[posId];
         Production storage prod = productions[pos.productionId];
         return (pos.productionId, Goblin(prod.goblin).health(posId, prod.borrowToken),
             debtShareToVal(prod.borrowToken, pos.debtShare), pos.owner);
     }
-
+    
     function deposit(address token, uint256 amount) external payable nonReentrant {
         TokenBank storage bank = banks[token];
         require(bank.isOpen && bank.canDeposit, 'Token not exist or cannot deposit');
 
-        calInterest(token);
+        calInterest(token); 
         if (token == address(0)) {
             amount = msg.value;
         } else {
             SafeToken.safeTransferFrom(token, msg.sender, address(this), amount);
         }
         bank.totalVal = bank.totalVal.add(amount);
-        uint256 total = totalToken(token).sub(amount);
+        uint256 total = totalToken(token).sub(amount); 
         uint256 ibTotal = IBToken(bank.ibTokenAddr).totalSupply();
         uint256 ibAmount = (total == 0 || ibTotal == 0) ? amount: amount.mul(ibTotal).div(total);
         IBToken(bank.ibTokenAddr).mint(msg.sender, ibAmount);
     }
-
+    
     function withdraw(address token, uint256 pAmount) external nonReentrant {
         TokenBank storage bank = banks[token];
         require(bank.isOpen && bank.canWithdraw, 'Token not exist or cannot withdraw');
@@ -949,23 +945,24 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
             SafeToken.safeTransfer(token, msg.sender, amount);
         }
     }
-
+    
     function work(uint256 posId, uint256 pid, uint256 borrow, bytes calldata data)
     external payable onlyEOA nonReentrant {
-        if (posId == 0) {
+
+        if (posId == 0) { 
             posId = currentPos;
             currentPos ++;
             positions[posId].owner = msg.sender;
             positions[posId].productionId = pid;
             positions[posId].debtShare = 0;
-
+            
             userPosition[msg.sender].push(posId);
-        } else {
+        } else { 
             require(posId < currentPos, "bad position id");
             require(positions[posId].owner == msg.sender, "not position owner");
-            pid = positions[posId].productionId;
+            pid = positions[posId].productionId; 
         }
-
+ 
         Production storage production = productions[pid];
         require(production.isOpen, 'Production not exists');
         require(borrow == 0 || production.canBorrow, "Production can not borrow");
@@ -975,48 +972,47 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         uint256 debt = _removeDebt(posId, production).add(borrow);
         bool isBorrowBNB = production.borrowToken == address(0);
 
-		uint256 sendBNB = msg.value;
-		uint256 beforeToken = 0;
-		if (isBorrowBNB) {
-			sendBNB = sendBNB.add(borrow);
-			require(sendBNB <= address(this).balance && debt <= banks[production.borrowToken].totalVal, "insufficient BNB in the bank");
-			beforeToken = address(this).balance.sub(sendBNB);
-		} else {
-			beforeToken = SafeToken.myBalance(production.borrowToken);
-			require(borrow <= beforeToken && debt <= banks[production.borrowToken].totalVal, "insufficient borrowToken in the bank");
-			beforeToken = beforeToken.sub(borrow);
-			SafeToken.safeApprove(production.borrowToken, production.goblin, borrow);
-		}
+        uint256 sendBNB = msg.value;
+        uint256 beforeToken = 0;
+        if (isBorrowBNB) {
+            sendBNB = sendBNB.add(borrow);
+            require(sendBNB <= address(this).balance && debt <= banks[production.borrowToken].totalVal, "insufficient BNB in the bank");
+            beforeToken = address(this).balance.sub(sendBNB);
+        } else {
+            beforeToken = SafeToken.myBalance(production.borrowToken);
+            require(borrow <= beforeToken && debt <= banks[production.borrowToken].totalVal, "insufficient borrowToken in the bank");
+            beforeToken = beforeToken.sub(borrow);
+            SafeToken.safeApprove(production.borrowToken, production.goblin, borrow);
+        }
 
         Goblin(production.goblin).work{value:sendBNB}(posId, msg.sender, production.borrowToken, borrow, debt, data);
-        uint256 backToken = isBorrowBNB? (address(this).balance.sub(beforeToken)) : SafeToken.myBalance(production.borrowToken).sub(beforeToken);
 
-        if(backToken > debt) {
+        uint256 backToken = isBorrowBNB? (address(this).balance.sub(beforeToken)) :
+            SafeToken.myBalance(production.borrowToken).sub(beforeToken);
+
+        if(backToken > debt) { // 没有借款
             backToken = backToken.sub(debt);
             debt = 0;
 
             isBorrowBNB? SafeToken.safeTransferETH(msg.sender, backToken):
-            SafeToken.safeTransfer(production.borrowToken, msg.sender, backToken);
+                SafeToken.safeTransfer(production.borrowToken, msg.sender, backToken);
 
-        }else if (debt > backToken) {
+        }else if (debt > backToken) { // 有借款 
             debt = debt.sub(backToken);
             backToken = 0;
 
             require(debt >= production.minDebt && debt <= production.maxDebt, "Debt scale is out of scope");
             uint256 health = Goblin(production.goblin).health(posId, production.borrowToken);
-            if(production.isStable){
-                require(config.isStable(production.goblin),"!goblin");
-            }
             require(health.mul(production.openFactor) >= debt.mul(GLO_VAL), "bad work factor");
-
+        
             _addDebt(posId, production, debt);
         }
         emit Work(posId, debt, backToken);
     }
-
+    
     function kill(uint256 posId) external payable onlyEOA nonReentrant {
         require(killWhitelist[msg.sender],"Not Whitelist");
-
+        
         Position storage pos = positions[posId];
         require(pos.debtShare > 0, "no debt");
         Production storage production = productions[pos.productionId];
@@ -1024,19 +1020,19 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         uint256 debt = _removeDebt(posId, production);
 
         uint256 health = Goblin(production.goblin).health(posId, production.borrowToken);
-        require(config.isStable(production.goblin),"!goblin");
         require(health.mul(production.liquidateFactor) < debt.mul(GLO_VAL), "can't liquidate");
         bool isBNB = production.borrowToken == address(0);
         uint256 before = isBNB? address(this).balance: SafeToken.myBalance(production.borrowToken);
-
+        
         Goblin(production.goblin).liquidate(posId, pos.owner, production.borrowToken);
-
+        
         uint256 back = isBNB? address(this).balance: SafeToken.myBalance(production.borrowToken);
         back = back.sub(before);
 
         uint256 prize = back.mul(config.getLiquidateBps()).div(GLO_VAL);
         uint256 rest = back.sub(prize);
         uint256 left = 0;
+
         if (prize > 0) {
             isBNB? SafeToken.safeTransferETH(devAddr, prize): SafeToken.safeTransfer(production.borrowToken, devAddr, prize);
         }
@@ -1048,7 +1044,7 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         }
         emit Kill(posId, msg.sender, prize, left);
     }
-
+    
     function _addDebt(uint256 posId, Production storage production, uint256 debtVal) internal {
         if (debtVal == 0) {
             return;
@@ -1062,7 +1058,7 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         bank.totalDebt = bank.totalDebt.add(debtVal);
         emit AddDebt(posId, debtShare);
     }
-
+    
     function _removeDebt(uint256 posId, Production storage production) internal returns (uint256) {
         TokenBank storage bank = banks[production.borrowToken];
         Position storage pos = positions[posId];
@@ -1079,17 +1075,17 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
             return 0;
         }
     }
-
+    
     function updateConfig(BankConfig _config) external onlyGov {
         config = _config;
     }
-
-    function addBank(address token,uint8 _decimals, string calldata _symbol) external onlyGov {
+    
+    function addBank(address token, string calldata _symbol) external onlyGov {
         TokenBank storage bank = banks[token];
         require(!bank.isOpen, 'token already exists');
 
         bank.isOpen = true;
-        address ibToken = genIBToken(_symbol,_decimals);
+        address ibToken = genIBToken(_symbol);
         bank.tokenAddr = token;
         bank.ibTokenAddr = ibToken;
         bank.canDeposit = true;
@@ -1100,20 +1096,19 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         bank.totalReserve = 0;
         bank.lastInterestTime = now;
     }
-
+    
     function createProduction(
         uint256 pid,
-        bool isOpen,
+        bool isOpen, 
         bool canBorrow,
-        address coinToken,
-        address currencyToken,
-        address borrowToken,
+        address coinToken, 
+        address currencyToken, 
+        address borrowToken, 
         address goblin,
-        uint256 minDebt,
+        uint256 minDebt, 
         uint256 maxDebt,
-        uint256 openFactor,
-        uint256 liquidateFactor,
-        bool isStable
+        uint256 openFactor, 
+        uint256 liquidateFactor
         ) external onlyGov {
 
         if(pid == 0){
@@ -1122,7 +1117,7 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         } else {
             require(pid < currentPid, "bad production id");
         }
-
+        
         Production storage production = productions[pid];
         production.isOpen = isOpen;
         production.canBorrow = canBorrow;
@@ -1135,39 +1130,38 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
         production.maxDebt = maxDebt;
         production.openFactor = openFactor;
         production.liquidateFactor = liquidateFactor;
-
-        production.isStable = isStable;
     }
-
+        
     function calInterest(address token) public {
         TokenBank storage bank = banks[token];
         require(bank.isOpen, 'token not exists');
         if (now > bank.lastInterestTime) {
             uint256 timePast = now.sub(bank.lastInterestTime);
-
+            
             uint256 totalDebt = bank.totalDebt;
             uint256 totalBalance = totalToken(token);
-
+            
             uint256 ratePerSec = config.getInterestRate(totalDebt, totalBalance);
             uint256 interest = ratePerSec.mul(timePast).mul(totalDebt).div(1e18);
-
+            
             uint256 toReserve = interest.mul(config.getReserveBps()).div(GLO_VAL);
-
+            
             bank.totalReserve = bank.totalReserve.add(toReserve);
             bank.totalDebt = bank.totalDebt.add(interest);
             bank.lastInterestTime = now;
         }
     }
-
+    
     function withdrawReserve(address token, address to, uint256 value) external onlyGov nonReentrant {
         TokenBank storage bank = banks[token];
         require(bank.isOpen, 'token not exists');
 
         uint balance = token == address(0)? address(this).balance: SafeToken.myBalance(token);
         if(balance >= bank.totalVal.add(value)) {
-
+           
         } else {
             bank.totalReserve = bank.totalReserve.sub(value);
+            bank.totalVal = bank.totalVal.sub(value);
         }
 
         if (token == address(0)) {
@@ -1176,25 +1170,23 @@ contract Bank is Initializable, ReentrancyGuardUpgradeSafe, Governable,IBTokenFa
             SafeToken.safeTransfer(token, to, value);
         }
     }
-
+    
     function ibTokenCalculation(address token, uint256 amount) view external returns(uint256){
         TokenBank memory bank = banks[token];
-        uint256 total = totalToken(token)/*.sub(amount)*/;
+        uint256 total = totalToken(token).sub(amount); 
         uint256 ibTotal = IBToken(bank.ibTokenAddr).totalSupply();
         return (total == 0 || ibTotal == 0) ? amount: amount.mul(ibTotal).div(total);
     }
-
+    
     function createkillWhitelist(address addr,bool status) external onlyGov {
         require(addr != address(0));
         killWhitelist[addr] = status;
     }
-
+    
     function setDevAddr(address addr) external onlyGov{
         require(addr != address(0));
         devAddr = addr;
     }
-
+    
     receive() external payable {}
 }
-
-
