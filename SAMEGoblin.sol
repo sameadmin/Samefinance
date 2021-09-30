@@ -687,7 +687,9 @@ contract SameGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
 
         // 1. Get the position's LP balance and LP total supply.
         uint256 lpBalance = shareToBalance(shares[id]);
-
+        if(lpBalance == 0){
+            return 0;
+        }
         // 2. Convert all farming tokens to debtToken and return total amount.
         if (borrowToken == token0) {
             return esp.calc_withdraw_one_coin(lpBalance,0);
