@@ -458,6 +458,7 @@ interface IFairLaunch {
 
 interface IESP{
     function calc_withdraw_one_coin(uint256 amounts, int128 i) external view returns (uint256);
+    function get_virtual_price() external view returns (uint256);
     function coins(uint256 i) external view returns (address);
 }
 
@@ -645,7 +646,6 @@ contract SameGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
         Strategy(strategy).execute{value:msg.value}(user, borrowToken, borrow, debt, ext);
         // 3. Add LP tokens back to the farming pool.
         _addShare(id,user);
-
         uint256 borrowTokenAmount = borrowToken.myBalance();
         if(borrowTokenAmount > 0){
             SafeToken.safeTransfer(borrowToken, msg.sender, borrowTokenAmount);
@@ -687,15 +687,9 @@ contract SameGoblin is Governable,ReentrancyGuardUpgradeSafe, Goblin {
 
         // 1. Get the position's LP balance and LP total supply.
         uint256 lpBalance = shareToBalance(shares[id]);
-        if(lpBalance == 0){
-            return 0;
-        }
+        if (lpBalance == 0) return 0;
         // 2. Convert all farming tokens to debtToken and return total amount.
-        if (borrowToken == token0) {
-            return esp.calc_withdraw_one_coin(lpBalance,0);
-        } else {
-            return esp.calc_withdraw_one_coin(lpBalance,1);
-        }
+        return lpBalance.mul(esp.get_virtual_price()).div(10**6);
     }
 
     function reinvest() public {
